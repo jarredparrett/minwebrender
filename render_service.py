@@ -9,7 +9,7 @@ host = os.getenv("DOMAIN", "127.0.0.1:5000")
 
 async def render_page_and_extract_text(url):
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
+        browser = await p.chromium.launch()
         page = await browser.new_page()
         await page.goto(url)
         content = await page.content()
