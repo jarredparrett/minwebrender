@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal Web Renderer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>Welcome to the Min Web Render(er)</h1>
+    <p>This service allows you to load simplified versions of web pages with just the essential content. It’s perfect for use in low connectivity environments where you need to access information quickly without loading unnecessary elements.</p>
+    <p>To use this service, simply prepend minwebrender.net/ to the URL you want to access in the following format:</p>
+    <code>minwebrender.net/&lt;website-url&gt;</code>
+    <p>Or, you can enter the website URL below:</p>
+    <form method="post">
+        <input type="text" name="url" placeholder="Enter the website URL here" required>
+        <button type="submit">Get Page</button>
+    </form>
+    <footer>Min Web Render | &copy; 2024</footer>
+</body>
+</html>
