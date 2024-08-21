@@ -1,9 +1,8 @@
 import markdown
 from flask import render_template, request, redirect, jsonify
 import asyncio
-from render_service import render_page_and_extract_text
 
-def init_routes(app):
+def init_routes(app, browser_service, async_loop):
 
     @app.route('/', methods=['GET', 'POST'])
     def home():
@@ -21,9 +20,8 @@ def init_routes(app):
             else:
                 full_url = url
 
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            markdown_text = loop.run_until_complete(render_page_and_extract_text(full_url))
+            future = asyncio.run_coroutine_threadsafe(browser_service.render_page_and_extract_text(full_url), async_loop)
+            markdown_text = future.result()
 
             html_content = markdown.markdown(markdown_text)
 
