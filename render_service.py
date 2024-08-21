@@ -4,40 +4,53 @@ from urllib.parse import urljoin, urlparse
 
 import html2text
 from bs4 import BeautifulSoup
+
+from asyncio import Semaphore, Queue, ensure_future
 from playwright.async_api import async_playwright
 
 host = os.getenv("DOMAIN", "0.0.0.0:10000")
+max_pages_env = int(os.getenv("MAX_PAGES", 6))
 
 class BrowserService:
-    def __init__(self, pool_size=5):
-        self.pool_size = pool_size
-        self.browsers = []
+    def __init__(self, max_pages=max_pages_env):
+        self.browser = None
         self.playwright = None
+        self.max_pages = max_pages
+        self.page_semaphore = Semaphore(self.max_pages)
+        self.queue = Queue()
 
     async def start(self):
-        """Start multiple browser instances."""
+        """Start the browser with limited concurrency."""
         self.playwright = await async_playwright().start()
-        for _ in range(self.pool_size):
-            browser = await self.playwright.chromium.launch()
-            self.browsers.append(browser)
+        self.browser = await self.playwright.chromium.launch()
 
     async def stop(self):
-        """Close all browser instances."""
-        for browser in self.browsers:
-            await browser.close()
+        """Stop the browser and playwright."""
+        if self.browser:
+            await self.browser.close()
         if self.playwright:
             await self.playwright.stop()
 
     async def render_page_and_extract_text(self, url):
-        """Get an available browser, render the page, and extract text."""
-        browser = self.browsers.pop(0)  # Get the first available browser
-        page = await browser.new_page()
-        await page.goto(url)
-        content = await page.content()
-        await page.close()
-        self.browsers.append(browser)  # Return the browser to the pool
+        """Enqueue the request and wait for it to be processed."""
+        future = ensure_future(self.queue_page_request(url))
+        return await future
 
-        return extract_text_content(content, url, host)
+    async def queue_page_request(self, url):
+        """Queue a request and process it when a page is available."""
+        async with self.page_semaphore:
+            return await self.process_page(url)
+
+    async def process_page(self, url):
+        """Process a single page and return the content."""
+        page = await self.browser.new_page()
+        try:
+            await page.goto(url, timeout=60000)  # 60 seconds timeout
+            content = await page.content()
+            return extract_text_content(content, url, host)
+        finally:
+            await page.close()
+
 
 def extract_text_content(html_content, original_url, host_url):
     soup = BeautifulSoup(html_content, 'html.parser')
